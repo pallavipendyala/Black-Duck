@@ -1,0 +1,57 @@
+name: compile_and_test
+
+on:
+  push:
+    branches: [ main ]
+
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build_and_test:
+    name: Build & test pyinstaller exe on ${{ matrix.os }}.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-10.15, windows-latest]
+        python-version: [3.7]
+        include:
+          - os: ubuntu-latest
+            target: linux
+            exefile: dist/bd_direct_scan
+
+          - os: macos-10.15
+            target: macos
+            exefile: dist/bd_direct_scan
+
+          - os: windows-latest
+            target: windows
+            exefile: dist/bd_direct_scan.exe
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip && pip install pyinstaller & python setup.py install
+
+      - name: Build testexe
+        run: |
+          pyinstaller --onefile bdscan/bdscanaction.py --hidden-import=_cffi_backend --name=bd_direct_scan
+          
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.target }}-exe
+          path: ${{ matrix.exefile }}
